@@ -30,9 +30,10 @@ class x86_64_Linux:
             if node.value not in self.locals:
                 self.alloc_local(node.value)
 
-        for child in getattr(node, "children", []):
-            if child:
-                self.collect_locals(child)
+        if node.type in ("IF", "WHILE", "FOR", "UNSAFE_BLOCK", "BODY", "THEN", "ELSE"):
+            for child in node.children:
+                if child:
+                    self.collect_locals(child)
 
     def generate(self):
         self.emit("global main")
@@ -81,6 +82,8 @@ class x86_64_Linux:
         t = node.type
 
         if t == "VAR_DECL":
+            if node.children[0].value == "FLOAT":
+                raise CodegenError("error: floats unimplemented")
             if len(node.children) > 1:
                 self.gen_expr(node.children[1])
                 self.emit(f"    mov [rbp{self.locals[node.value]}], rax")
@@ -165,9 +168,49 @@ class x86_64_Linux:
 
         self.emit(f"    jmp {start}")
         self.emit(f"{end}:")
+    
+    def gen_assign(self, node):
+        op = node.value
+        lhs, rhs = node.children
+
+        if lhs.type != "IDENTIFIER":
+            raise CodegenError("Left side of assignment must be a variable")
+
+        offset = self.locals[lhs.value]
+
+        self.emit(f"    mov rax, [rbp{offset}]")
+        self.emit("    push rax")
+
+        self.gen_expr(rhs)
+        self.emit("    mov rbx, rax")
+        self.emit("    pop rax")
+
+        if op == "ASSIGN":
+            self.emit("    mov rax, rbx")
+
+        elif op == "PLUS_ASSIGN":
+            self.emit("    add rax, rbx")
+
+        elif op == "MINUS_ASSIGN":
+            self.emit("    sub rax, rbx")
+
+        elif op == "MULT_ASSIGN":
+            self.emit("    imul rax, rbx")
+
+        elif op == "DIV_ASSIGN":
+            self.emit("    cqo")
+            self.emit("    idiv rbx")
+
+        else:
+            raise CodegenError(f"error: unsupported assignment op {op}")
+
+        self.emit(f"    mov [rbp{offset}], rax")
 
     def gen_expr(self, node):
         t = node.type
+        
+        if t == "NUMBER" and isinstance(node.value, float):
+            raise CodegenError("error: floats unimplemented")
 
         if t == "NUMBER":
             self.emit(f"    mov rax, {node.value}")
@@ -176,6 +219,9 @@ class x86_64_Linux:
             if node.value not in self.locals:
                 raise CodegenError(f"Undefined variable {node.value}")
             self.emit(f"    mov rax, [rbp{self.locals[node.value]}]")
+
+        elif t == "BIN_OP" and node.value.endswith("_ASSIGN"):
+            self.gen_assign(node)
 
         elif t == "BIN_OP":
             self.gen_expr(node.children[0])
@@ -190,7 +236,7 @@ class x86_64_Linux:
             self.gen_call(node)
 
         else:
-            raise CodegenError(f"Unsupported expr {t}")
+            raise CodegenError(f"error: unsupported expr {t}")
 
     def gen_binop(self, op):
         ops = {
@@ -230,3 +276,4 @@ class x86_64_Linux:
             self.emit(f"    mov {self.ARG_REGS[i]}, rax")
 
         self.emit(f"    call {node.value}")
+
