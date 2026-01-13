@@ -1,27 +1,19 @@
 from src.lexer.lexer import Lexer
 from src.parser.parser import Parser
 from src.semantic import SemanticAnalyzer
+from src.compiler.x86_64_linux import x86_64_Linux
 
-l = Lexer("""
-int32 add(int32 a, int32 b) {
-    unsafe {
-        char buffer[32];
-    }
-    return a + b;
+source = """
+int32 main() {
+    return 42;
 }
-          
-int main() {
-    int32 result = add(10, 20);
-    return result;
-}
-""")
+"""
 
+ast = Parser(Lexer(source).tokenize()).parse()
+SemanticAnalyzer(ast).analyze()
 
-t = l.tokenize()
-p = Parser(t)
-ast = p.parse()
+asm = x86_64_Linux(ast).generate()
+print(asm)
 
-analyzer = SemanticAnalyzer(ast)
-analyzer.analyze()
-
-print(ast)
+with open("out.asm", "w") as f:
+    f.write(asm)
