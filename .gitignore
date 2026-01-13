@@ -1,2 +1,5 @@
 __pycache__/
 *.sh
+*.o
+*.asm
+*.out

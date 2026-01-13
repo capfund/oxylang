@@ -174,7 +174,7 @@ class x86_64_Linux:
         lhs, rhs = node.children
 
         if lhs.type != "IDENTIFIER":
-            raise CodegenError("Left side of assignment must be a variable")
+            raise CodegenError("error: left side of assignment not a variable")
 
         offset = self.locals[lhs.value]
 
@@ -182,24 +182,24 @@ class x86_64_Linux:
         self.emit("    push rax")
 
         self.gen_expr(rhs)
-        self.emit("    mov rbx, rax")
+        self.emit("    mov rcx, rax")
         self.emit("    pop rax")
 
         if op == "ASSIGN":
-            self.emit("    mov rax, rbx")
+            self.emit("    mov rax, rcx")
 
         elif op == "PLUS_ASSIGN":
-            self.emit("    add rax, rbx")
+            self.emit("    add rax, rcx")
 
         elif op == "MINUS_ASSIGN":
-            self.emit("    sub rax, rbx")
+            self.emit("    sub rax, rcx")
 
         elif op == "MULT_ASSIGN":
-            self.emit("    imul rax, rbx")
+            self.emit("    imul rax, rcx")
 
         elif op == "DIV_ASSIGN":
             self.emit("    cqo")
-            self.emit("    idiv rbx")
+            self.emit("    idiv rcx")
 
         else:
             raise CodegenError(f"error: unsupported assignment op {op}")
@@ -227,7 +227,7 @@ class x86_64_Linux:
             self.gen_expr(node.children[0])
             self.emit("    push rax")
             self.gen_expr(node.children[1])
-            self.emit("    mov rbx, rax")
+            self.emit("    mov rcx, rax")
             self.emit("    pop rax")
 
             self.gen_binop(node.value)
@@ -246,16 +246,16 @@ class x86_64_Linux:
         }
 
         if op in ops:
-            self.emit(f"    {ops[op]} rax, rbx")
+            self.emit(f"    {ops[op]} rax, rcx")
             return
 
         if op == "DIVIDE":
             self.emit("    cqo")
-            self.emit("    idiv rbx")
+            self.emit("    idiv rcx")
             return
 
         if op in ("EQ", "NE", "LT", "LE", "GT", "GE"):
-            self.emit("    cmp rax, rbx")
+            self.emit("    cmp rax, rcx")
             setcc = {
                 "EQ": "sete",
                 "NE": "setne",
@@ -268,8 +268,8 @@ class x86_64_Linux:
             self.emit("    movzx rax, al")
             return
 
-        raise CodegenError(f"Unsupported operator {op}")
-        
+        raise CodegenError(f"error: unsupported operator {op}")
+
     def gen_call(self, node):
         for i, arg in enumerate(node.children):
             self.gen_expr(arg)
