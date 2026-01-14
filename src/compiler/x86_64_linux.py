@@ -29,15 +29,23 @@ class x86_64_Linux:
             self.strings[value] = lbl
             self.rodata.append((lbl, value))
         return self.strings[value]
+    
+    def sizeof(self, type_node):
+        if type_node.value == "CHAR":
+            return 1
+        if type_node.value == "CHAR_PTR":
+            return 8
+        return 8
 
-    def alloc_local(self, name):
-        self.stack_size += 8
-        self.locals[name] = -self.stack_size
+    def alloc_local(self, name, size):
+        self.stack_size += size
+        self.locals[name] = (-self.stack_size, size)
 
     def collect_locals(self, node):
         if node.type == "VAR_DECL":
             if node.value not in self.locals:
-                self.alloc_local(node.value)
+                size = self.sizeof(node.children[0])
+                self.alloc_local(node.value, size)
 
         if node.type in ("IF", "WHILE", "FOR", "UNSAFE_BLOCK", "BODY", "THEN", "ELSE"):
             for child in node.children:
@@ -71,7 +79,8 @@ class x86_64_Linux:
         self.stack_size = 0
 
         for param in params:
-            self.alloc_local(param.value)
+            size = self.sizeof(param.children[0])
+            self.alloc_local(param.value, size)
 
         for stmt in body:
             self.collect_locals(stmt)
@@ -85,7 +94,8 @@ class x86_64_Linux:
         if aligned:
             self.emit(f"    sub rsp, {aligned}")
         for i, param in enumerate(params):
-            self.emit(f"    mov [rbp{self.locals[param.value]}], {self.ARG_REGS[i]}")
+            offset, _ = self.locals[param.value]
+            self.emit(f"    mov [rbp{offset}], {self.ARG_REGS[i]}")
 
         for stmt in body:
             self.gen_stmt(stmt)
@@ -102,7 +112,11 @@ class x86_64_Linux:
                 raise CodegenError("error: floats unimplemented")
             if len(node.children) > 1:
                 self.gen_expr(node.children[1])
-                self.emit(f"    mov [rbp{self.locals[node.value]}], rax")
+                offset, size = self.locals[node.value]
+                if size == 1:
+                    self.emit(f"    mov byte [rbp{offset}], al")
+                else:
+                    self.emit(f"    mov [rbp{offset}], rax")
 
         elif t == "RETURN":
             if node.children:
@@ -192,7 +206,7 @@ class x86_64_Linux:
         if lhs.type != "IDENTIFIER":
             raise CodegenError("error: left side of assignment not a variable")
 
-        offset = self.locals[lhs.value]
+        offset, size = self.locals[lhs.value]
 
         self.emit(f"    mov rax, [rbp{offset}]")
         self.emit("    push rax")
@@ -220,7 +234,10 @@ class x86_64_Linux:
         else:
             raise CodegenError(f"error: unsupported assignment op {op}")
 
-        self.emit(f"    mov [rbp{offset}], rax")
+        if size == 1:
+            self.emit(f"    mov byte [rbp{offset}], al")
+        else:
+            self.emit(f"    mov [rbp{offset}], rax")
 
     def gen_expr(self, node):
         t = node.type
@@ -234,7 +251,11 @@ class x86_64_Linux:
         elif t == "IDENTIFIER":
             if node.value not in self.locals:
                 raise CodegenError(f"Undefined variable {node.value}")
-            self.emit(f"    mov rax, [rbp{self.locals[node.value]}]")
+            offset, size = self.locals[node.value]
+            if size == 1:
+                self.emit(f"    movzx rax, byte [rbp{offset}]")
+            else:
+                self.emit(f"    mov rax, [rbp{offset}]")
 
         elif t == "BIN_OP" and node.value.endswith("_ASSIGN"):
             self.gen_assign(node)

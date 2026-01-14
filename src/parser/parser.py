@@ -61,6 +61,10 @@ class Parser:
     def parse_declaration_or_function(self):
         type_tok = self.current()
         self.advance()
+        is_ptr = False
+        if self.current().type == "MULTIPLY":
+            is_ptr = True
+            self.advance()
         name = self.eat("IDENTIFIER").value
 
         array_size = None
@@ -69,7 +73,8 @@ class Parser:
             array_size = self.eat("NUMBER").value
             self.eat("RBRACKET")
 
-        type_node = ASTNode("TYPE", type_tok.type,
+        type_name = type_tok.type + ("_PTR" if is_ptr else "")
+        type_node = ASTNode("TYPE", type_name,
                             [ASTNode("ARRAY_SIZE", array_size)] if array_size else [])
 
         if self.current().type == "LPAREN":
