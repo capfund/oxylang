@@ -291,9 +291,16 @@ class x86_64_Linux:
         raise CodegenError(f"error: unsupported operator {op}")
 
     def gen_call(self, node):
-        for i, arg in enumerate(node.children):
+        argc = len(node.children)
+        if argc > len(self.ARG_REGS):
+            raise CodegenError("too many arguments")
+
+        for arg in reversed(node.children):
             self.gen_expr(arg)
-            self.emit(f"    mov {self.ARG_REGS[i]}, rax")
+            self.emit("    push rax")
+        for i in range(argc):
+            self.emit(f"    pop {self.ARG_REGS[i]}")
 
+        self.emit("    sub rsp, 8")
         self.emit(f"    call {node.value}")
-
+        self.emit("    add rsp, 8")

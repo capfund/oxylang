@@ -15,7 +15,7 @@ int main() {
     int n = 5;
     int result = factorial(n);
     int a = 5;
-    int test = a + result;
+    char test = "Hello world!";
 
     return test;
 }
