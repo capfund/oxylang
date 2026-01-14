@@ -13,6 +13,8 @@ class x86_64_Linux:
         self.label_id = 0
         self.locals = {}
         self.stack_size = 0
+        self.strings = {}
+        self.rodata = []
 
     def emit(self, line=""):
         self.lines.append(line)
@@ -20,6 +22,13 @@ class x86_64_Linux:
     def new_label(self, prefix="L"):
         self.label_id += 1
         return f"{prefix}{self.label_id}"
+
+    def string_label(self, value):
+        if value not in self.strings:
+            lbl = f".LC{len(self.strings)}"
+            self.strings[value] = lbl
+            self.rodata.append((lbl, value))
+        return self.strings[value]
 
     def alloc_local(self, name):
         self.stack_size += 8
@@ -43,6 +52,13 @@ class x86_64_Linux:
         for node in self.ast.children:
             if node.type == "FUNCTION":
                 self.gen_function(node)
+
+        if self.rodata:
+            self.emit()
+            self.emit("section .rodata")
+            for lbl, s in self.rodata:
+                escaped = s.replace("\\", "\\\\").replace('"', '\\"')
+                self.emit(f"{lbl}: db \"{escaped}\", 0")
 
         return "\n".join(self.lines)
 
@@ -234,6 +250,10 @@ class x86_64_Linux:
 
         elif t == "CALL":
             self.gen_call(node)
+
+        elif t == "STRING":
+            lbl = self.string_label(node.value)
+            self.emit(f"    lea rax, [{lbl}]")
 
         else:
             raise CodegenError(f"error: unsupported expr {t}")
