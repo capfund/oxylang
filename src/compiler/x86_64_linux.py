@@ -54,6 +54,7 @@ class x86_64_Linux:
 
     def generate(self):
         self.emit("global main")
+        self.emit("extern puts")
         self.emit()
         self.emit("section .text")
 
@@ -322,6 +323,6 @@ class x86_64_Linux:
         for i in range(argc):
             self.emit(f"    pop {self.ARG_REGS[i]}")
 
-        self.emit("    sub rsp, 8")
+        self.emit("    sub rsp, 16")
         self.emit(f"    call {node.value}")
-        self.emit("    add rsp, 8")
+        self.emit("    add rsp, 16")

@@ -17,7 +17,10 @@ int main() {
     int a = 5;
     char* test = "Hello world!";
 
-    return test;
+    puts(test);
+    puts(result);
+
+    return result;
 }
 """
 
