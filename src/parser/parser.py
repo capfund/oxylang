@@ -125,8 +125,16 @@ class Parser:
         while self.current().type != "RPAREN":
             t = self.current()
             self.advance()
+            is_ptr = False
+
+            if self.current().type == "MULTIPLY":
+                is_ptr = True
+                self.advance()
+            
             name = self.eat("IDENTIFIER").value
-            params.append(ASTNode("PARAM", name, [ASTNode("TYPE", t.type)]))
+            type_name = t.type + ("_PTR" if is_ptr else "")
+            params.append(ASTNode("PARAM", name, [ASTNode("TYPE", type_name)]))
+            
             if self.current().type == "COMMA":
                 self.advance()
         return params

@@ -12,6 +12,10 @@ fn factorial(int n) -> int {
     ret n * factorial(n-1);
 }
 
+fn wrapper(char* str) -> void {
+    puts(str);
+}
+
 fn main() -> int {
     int n = 5;
     int result = factorial(n);
@@ -19,6 +23,7 @@ fn main() -> int {
     char* test = "Hello world!";
 
     puts(test);
+    wrapper("Hello world from wrapper");
     ret result;
 }
 """
