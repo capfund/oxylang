@@ -11,7 +11,7 @@ class ASTNode:
 class Parser:
     TYPE_TOKENS = {
         "INT", "INT16", "INT32", "INT64",
-        "CHAR", "FLOAT", "VOID"
+        "CHAR", "FLOAT", "VOID", "FN"
     }
 
     PRECEDENCE = {
@@ -40,9 +40,14 @@ class Parser:
     def eat(self, t):
         tok = self.current()
         if tok.type != t:
-            raise SyntaxError(f"Expected {t}, got {tok}")
+            raise SyntaxError(f"error: expected {t}, got {tok}")
         self.advance()
         return tok
+    
+    def eat_type(self):
+        if self.current().type not in self.TYPE_TOKENS:
+            raise SyntaxError(f"error: expected type, got {self.current()}")
+        return self.eat(self.current().type)
 
     def parse(self):
         nodes = []
@@ -59,40 +64,61 @@ class Parser:
         return self.parse_statement()
 
     def parse_declaration_or_function(self):
-        type_tok = self.current()
-        self.advance()
-        is_ptr = False
-        if self.current().type == "MULTIPLY":
-            is_ptr = True
-            self.advance()
-        name = self.eat("IDENTIFIER").value
+        tok = self.current()
+        
+        if tok.type == "FN":
+            self.eat("FN")
+            name = self.eat("IDENTIFIER").value
 
-        array_size = None
-        if self.current().type == "LBRACKET":
-            self.advance()
-            array_size = self.eat("NUMBER").value
-            self.eat("RBRACKET")
-
-        type_name = type_tok.type + ("_PTR" if is_ptr else "")
-        type_node = ASTNode("TYPE", type_name,
-                            [ASTNode("ARRAY_SIZE", array_size)] if array_size else [])
-
-        if self.current().type == "LPAREN":
-            self.advance()
+            self.eat("LPAREN")
             params = self.parse_parameters()
             self.eat("RPAREN")
+
+            self.eat("ARROW")
+            return_type_tok = self.eat_type()
+            return_type = ASTNode("TYPE", return_type_tok.type)
+
             self.eat("LBRACE")
             body = self.parse_block()
             self.eat("RBRACE")
-            return ASTNode("FUNCTION", name, [type_node, ASTNode("PARAMS", children=params), ASTNode("BODY", children=body)])
 
-        init = None
-        if self.current().type == "ASSIGN":
+            return ASTNode("FUNCTION", name, [return_type, ASTNode("PARAMS", children=params), ASTNode("BODY", children=body)])
+
+        if tok.type in self.TYPE_TOKENS:
+            type_tok = self.current()
             self.advance()
-            init = self.parse_expression()
+            is_ptr = False
+            if self.current().type == "MULTIPLY":
+                is_ptr = True
+                self.advance()
+            name = self.eat("IDENTIFIER").value
 
-        self.eat("SEMICOLON")
-        return ASTNode("VAR_DECL", name, [type_node, init] if init else [type_node])
+            array_size = None
+            if self.current().type == "LBRACKET":
+                self.advance()
+                array_size = self.eat("NUMBER").value
+                self.eat("RBRACKET")
+
+            type_name = type_tok.type + ("_PTR" if is_ptr else "")
+            type_node = ASTNode("TYPE", type_name,
+                                [ASTNode("ARRAY_SIZE", array_size)] if array_size else [])
+
+            if self.current().type == "LPAREN":
+                self.advance()
+                params = self.parse_parameters()
+                self.eat("RPAREN")
+                self.eat("LBRACE")
+                body = self.parse_block()
+                self.eat("RBRACE")
+                return ASTNode("FUNCTION", name, [type_node, ASTNode("PARAMS", children=params), ASTNode("BODY", children=body)])
+
+            init = None
+            if self.current().type == "ASSIGN":
+                self.advance()
+                init = self.parse_expression()
+
+            self.eat("SEMICOLON")
+            return ASTNode("VAR_DECL", name, [type_node, init] if init else [type_node])
 
     def parse_parameters(self):
         params = []
@@ -118,7 +144,7 @@ class Parser:
         if tok.type == "UNSAFE":
             return self.parse_unsafe()
 
-        if tok.type == "RETURN":
+        if tok.type == "RET":
             self.advance()
             expr = None
             if self.current().type != "SEMICOLON":

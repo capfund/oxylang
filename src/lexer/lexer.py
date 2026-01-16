@@ -11,7 +11,7 @@ class Lexer:
     KEYWORDS = {
         "char", "int", "int16", "int32", "int64",
         "float", "void",
-        "return", "if", "else", "while", "for",
+        "ret", "fn", "if", "else", "while", "for",
         "break", "continue", "unsafe"
     }
 
@@ -92,6 +92,9 @@ class Lexer:
 
     def lex_operator_or_symbol(self):
         two = (self.current_char() or '') + (self.peek() or '')
+        if two == "->":
+            self.advance(2)
+            return Token("ARROW")
         if two in self.OPERATORS:
             self.advance(2)
             return Token(self.OPERATORS[two])

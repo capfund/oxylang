@@ -5,22 +5,21 @@ from compiler.x86_64_linux import x86_64_Linux
 import os
 
 source = """
-int factorial(int n) {
+fn factorial(int n) -> int {
     if (n <= 1) {
-        return 1;
+        ret 1;
     }
-    return n * factorial(n - 1);
+    ret n * factorial(n-1);
 }
 
-int main() {
+fn main() -> int {
     int n = 5;
     int result = factorial(n);
     int a = 5;
     char* test = "Hello world!";
 
     puts(test);
-
-    return result;
+    ret result;
 }
 """
 
