@@ -76,7 +76,14 @@ class Parser:
 
             self.eat("ARROW")
             return_type_tok = self.eat_type()
-            return_type = ASTNode("TYPE", return_type_tok.type)
+
+            is_ptr = False
+            if self.current().type == "MULTIPLY":
+                is_ptr = True
+                self.advance()
+
+            type_name = return_type_tok.type + ("_PTR" if is_ptr else "")
+            return_type = ASTNode("TYPE", type_name)
 
             self.eat("LBRACE")
             body = self.parse_block()
@@ -256,6 +263,11 @@ class Parser:
         if tok.type == "STRING":
             self.advance()
             return ASTNode("STRING", tok.value)
+        
+        if tok.type == "MULTIPLY":
+            self.advance()
+            expr = self.parse_primary()
+            return ASTNode("DEREF", children=[expr])
 
         if tok.type == "IDENTIFIER":
             if self.peek().type == "LPAREN":

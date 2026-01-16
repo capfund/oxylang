@@ -151,7 +151,7 @@ class x86_64_Linux:
                 raise CodegenError("continue outside loop")
             start, _ = self.loop_stack[-1]
             self.emit(f"    jmp {start}")
-            
+
         else:
             self.gen_expr(node)
 
@@ -225,8 +225,16 @@ class x86_64_Linux:
         op = node.value
         lhs, rhs = node.children
 
-        if lhs.type != "IDENTIFIER":
-            raise CodegenError("error: left side of assignment not a variable")
+        if lhs.type == "IDENTIFIER":
+            offset, size = self.locals[lhs.value]
+            self.emit(f"    lea rdx, [rbp{offset}]")
+
+        elif lhs.type == "DEREF":
+            self.gen_expr(lhs.children[0])
+            self.emit("    mov rdx, rax")
+
+        else:
+            raise CodegenError("error: invalid assignment target")
 
         offset, size = self.locals[lhs.value]
 
@@ -257,9 +265,9 @@ class x86_64_Linux:
             raise CodegenError(f"error: unsupported assignment op {op}")
 
         if size == 1:
-            self.emit(f"    mov byte [rbp{offset}], al")
+            self.emit("    mov byte [rdx], al")
         else:
-            self.emit(f"    mov [rbp{offset}], rax")
+            self.emit("    mov [rdx], rax")
 
     def gen_expr(self, node):
         t = node.type
@@ -269,6 +277,10 @@ class x86_64_Linux:
 
         if t == "NUMBER":
             self.emit(f"    mov rax, {node.value}")
+
+        elif t == "DEREF":
+            self.gen_expr(node.children[0])
+            self.emit("    mov rax, [rax]")
 
         elif t == "IDENTIFIER":
             if node.value not in self.locals:
