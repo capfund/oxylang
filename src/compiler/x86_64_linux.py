@@ -25,7 +25,7 @@ class x86_64_Linux:
 
     def string_label(self, value):
         if value not in self.strings:
-            lbl = f".LC{len(self.strings)}"
+            lbl = f"LC{len(self.strings)}"
             self.strings[value] = lbl
             self.rodata.append((lbl, value))
         return self.strings[value]

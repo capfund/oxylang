@@ -14,6 +14,9 @@ fn factorial(int n) -> int {
 
 fn wrapper(char* str) -> void {
     puts(str);
+    while (1) {
+        puts("inside inf loop");
+    }
 }
 
 fn main() -> int {
