@@ -18,7 +18,6 @@ int main() {
     char* test = "Hello world!";
 
     puts(test);
-    puts(result);
 
     return result;
 }
