@@ -168,6 +168,16 @@ class Parser:
 
         if tok.type == "FOR":
             return self.parse_for()
+        
+        if tok.type == "BREAK":
+            self.advance()
+            self.eat("SEMICOLON")
+            return ASTNode("BREAK")
+
+        if tok.type == "CONTINUE":
+            self.advance()
+            self.eat("SEMICOLON")
+            return ASTNode("CONTINUE")
 
         expr = self.parse_expression()
         self.eat("SEMICOLON")

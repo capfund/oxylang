@@ -14,9 +14,15 @@ fn factorial(int n) -> int {
 
 fn wrapper(char* str) -> void {
     puts(str);
+    int n = 5;
     while (1) {
-        puts("inside inf loop");
+        n += 1;
+        if (n >= 5) {
+            break;
+        }
+        continue;
     }
+    puts("done loop");
 }
 
 fn main() -> int {

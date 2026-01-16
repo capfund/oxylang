@@ -15,6 +15,7 @@ class x86_64_Linux:
         self.stack_size = 0
         self.strings = {}
         self.rodata = []
+        self.loop_stack = []
 
     def emit(self, line=""):
         self.lines.append(line)
@@ -139,6 +140,18 @@ class x86_64_Linux:
             for s in node.children:
                 self.gen_stmt(s)
 
+        elif t == "BREAK":
+            if not self.loop_stack:
+                raise CodegenError("break outside loop")
+            _, end = self.loop_stack[-1]
+            self.emit(f"    jmp {end}")
+
+        elif t == "CONTINUE":
+            if not self.loop_stack:
+                raise CodegenError("continue outside loop")
+            start, _ = self.loop_stack[-1]
+            self.emit(f"    jmp {start}")
+            
         else:
             self.gen_expr(node)
 
@@ -166,6 +179,8 @@ class x86_64_Linux:
         start = self.new_label("while")
         end = self.new_label("endwhile")
 
+        self.loop_stack.append((start, end))
+
         self.emit(f"{start}:")
         self.gen_expr(node.children[0])
         self.emit("    cmp rax, 0")
@@ -177,6 +192,8 @@ class x86_64_Linux:
         self.emit(f"    jmp {start}")
         self.emit(f"{end}:")
 
+        self.loop_stack.pop()
+
     def gen_for(self, node):
         init, cond, step, body = node.children
         start = self.new_label("for")
@@ -184,6 +201,8 @@ class x86_64_Linux:
 
         if init:
             self.gen_expr(init)
+
+        self.loop_stack.append((start, end))
 
         self.emit(f"{start}:")
         if cond:
@@ -199,6 +218,8 @@ class x86_64_Linux:
 
         self.emit(f"    jmp {start}")
         self.emit(f"{end}:")
+
+        self.loop_stack.pop()
     
     def gen_assign(self, node):
         op = node.value
