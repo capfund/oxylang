@@ -269,11 +269,44 @@ class Parser:
             expr = self.parse_primary()
             return ASTNode("DEREF", children=[expr])
 
+        if tok.type == "AMPERSAND":
+            self.advance()
+            expr = self.parse_primary()
+            return ASTNode("ADDROF", children=[expr])
+
+        if tok.type == "INCREMENT":
+            self.advance()
+            expr = self.parse_primary()
+            return ASTNode("PRE_INC", children=[expr])
+
+        if tok.type == "DECREMENT":
+            self.advance()
+            expr = self.parse_primary()
+            return ASTNode("PRE_DEC", children=[expr])
+
         if tok.type == "IDENTIFIER":
             if self.peek().type == "LPAREN":
-                return self.parse_call()
-            self.advance()
-            return ASTNode("IDENTIFIER", tok.value)
+                expr = self.parse_call()
+            else:
+                self.advance()
+                expr = ASTNode("IDENTIFIER", tok.value)
+            
+            # Handle postfix operations: array indexing and postfix increment/decrement
+            while True:
+                if self.current().type == "LBRACKET":
+                    self.advance()
+                    index = self.parse_expression()
+                    self.eat("RBRACKET")
+                    expr = ASTNode("ARRAY_INDEX", children=[expr, index])
+                elif self.current().type == "INCREMENT":
+                    self.advance()
+                    expr = ASTNode("POST_INC", children=[expr])
+                elif self.current().type == "DECREMENT":
+                    self.advance()
+                    expr = ASTNode("POST_DEC", children=[expr])
+                else:
+                    break
+            return expr
 
         if tok.type == "LPAREN":
             self.advance()

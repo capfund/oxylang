@@ -26,10 +26,12 @@ fn wrapper(char* str) -> void {
 }
 
 fn main() -> int {
-    char* s = "hi";
-    char c = *s;
-    wrapper("Hello, World!");
-    ret c;
+    char* s = "hello";
+    int result = factorial(5);
+    puts("Factorial computed");
+    result++;
+
+    ret result;
 }
 """
 
