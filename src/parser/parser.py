@@ -274,6 +274,11 @@ class Parser:
             expr = self.parse_primary()
             return ASTNode("ADDROF", children=[expr])
 
+        if tok.type == "MINUS":
+            self.advance()
+            expr = self.parse_primary()
+            return ASTNode("UNARY_MINUS", children=[expr])
+
         if tok.type == "INCREMENT":
             self.advance()
             expr = self.parse_primary()
@@ -291,7 +296,6 @@ class Parser:
                 self.advance()
                 expr = ASTNode("IDENTIFIER", tok.value)
             
-            # Handle postfix operations: array indexing and postfix increment/decrement
             while True:
                 if self.current().type == "LBRACKET":
                     self.advance()

@@ -33,6 +33,9 @@ fn main() -> int {
 
     int x = 10 % 3;
     puts("Modulo computed");
+    x = -x;
+    puts("Negation computed");
+    x = -x;
 
     ret x;
 }

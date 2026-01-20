@@ -36,7 +36,8 @@ class x86_64_Linux:
             return 1
         if type_node.value == "CHAR_PTR":
             return 8
-        # Check for array type
+        
+        # array size
         if type_node.children and type_node.children[0].type == "ARRAY_SIZE":
             base_size = 8 if type_node.value.endswith("_PTR") else (1 if type_node.value == "CHAR" else 8)
             array_size = type_node.children[0].value
@@ -232,7 +233,6 @@ class x86_64_Linux:
         op = node.value
         lhs, rhs = node.children
 
-        # First, determine the target address and size
         if lhs.type == "IDENTIFIER":
             offset, size = self.locals[lhs.value]
             self.emit(f"    lea rdx, [rbp{offset}]")
@@ -240,10 +240,10 @@ class x86_64_Linux:
         elif lhs.type == "DEREF":
             self.gen_expr(lhs.children[0])
             self.emit("    mov rdx, rax")
-            size = 8  # Default pointer dereference is 8 bytes
+            size = 8 # by default
 
         elif lhs.type == "ARRAY_INDEX":
-            # array[index] - compute address
+            #array[index] - compute address
             base = lhs.children[0]
             index_node = lhs.children[1]
             
@@ -253,12 +253,12 @@ class x86_64_Linux:
             self.emit("    pop rcx")
             self.emit("    add rax, rcx")
             self.emit("    mov rdx, rax")
-            size = 8  # Default array element size
+            size = 8
 
         else:
             raise CodegenError("error: invalid assignment target")
 
-        # Now evaluate the right-hand side and perform the operation
+        #RHS
         self.gen_expr(rhs)
         self.emit("    mov rcx, rax")
 
@@ -266,7 +266,6 @@ class x86_64_Linux:
             self.emit("    mov rax, rcx")
 
         elif op == "PLUS_ASSIGN":
-            # Load current value, add to it
             if size == 1:
                 self.emit("    movzx rax, byte [rdx]")
             else:
@@ -298,7 +297,6 @@ class x86_64_Linux:
         else:
             raise CodegenError(f"error: unsupported assignment op {op}")
 
-        # Store result back
         if size == 1:
             self.emit("    mov byte [rdx], al")
         else:
@@ -326,7 +324,7 @@ class x86_64_Linux:
                 offset, _ = self.locals[name]
                 self.emit(f"    lea rax, [rbp{offset}]")
             elif expr.type == "ARRAY_INDEX":
-                # &arr[i] -> compute array base + index address
+                # &arr[i]; compute array base + index
                 base = expr.children[0]
                 index_node = expr.children[1]
                 
@@ -339,7 +337,7 @@ class x86_64_Linux:
                 raise CodegenError("error: can only take address of identifiers and array elements")
 
         elif t == "ARRAY_INDEX":
-            # array[index] = *(array + index)
+            #array[index] = *(array + index)
             base = node.children[0]
             index_node = node.children[1]
             
@@ -447,6 +445,10 @@ class x86_64_Linux:
         elif t == "STRING":
             lbl = self.string_label(node.value)
             self.emit(f"    lea rax, [{lbl}]")
+
+        elif t == "UNARY_MINUS":
+            self.gen_expr(node.children[0])
+            self.emit("    neg rax")
 
         else:
             raise CodegenError(f"error: unsupported expr {t}")
