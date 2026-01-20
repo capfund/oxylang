@@ -28,7 +28,7 @@ class Lexer:
         '&&': "AND", '||': "OR", '!': "NOT",
         '+=': "PLUS_ASSIGN", '-=': "MINUS_ASSIGN",
         '*=': "MULT_ASSIGN", '/=': "DIV_ASSIGN", '%=': "MOD_ASSIGN",
-        '&': "AMPERSAND", '++': "INCREMENT", '--': "DECREMENT"
+        '&': "AMPERSAND", '++': "INCREMENT", '--': "DECREMENT", "%": "MOD"
     }
 
     def __init__(self, text):

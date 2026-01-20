@@ -31,7 +31,10 @@ fn main() -> int {
     puts("Factorial computed");
     result++;
 
-    ret result;
+    int x = 10 % 3;
+    puts("Modulo computed");
+
+    ret x;
 }
 """
 
