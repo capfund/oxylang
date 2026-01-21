@@ -1,3 +1,6 @@
+from platform import node
+
+
 class CodegenError(Exception):
     pass
 
@@ -62,8 +65,8 @@ class x86_64_Linux:
     def generate(self):
         self.emit("global main")
         self.emit("extern puts")
-        self.emit("extern itoa")
-        self.emit("extern atoi")
+        #self.emit("extern itoa")
+        #self.emit("extern atoi")
         self.emit()
         self.emit("section .text")
 
@@ -313,7 +316,7 @@ class x86_64_Linux:
 
         elif t == "DEREF":
             self.gen_expr(node.children[0])
-            self.emit("    mov rax, [rax]")
+            self.emit("    movzx rax, byte [rax]")
 
         elif t == "ADDROF":
             expr = node.children[0]
@@ -346,7 +349,7 @@ class x86_64_Linux:
             self.gen_expr(base)
             self.emit("    pop rcx")
             self.emit("    add rax, rcx")
-            self.emit("    mov rax, [rax]")
+            self.emit("    movzx rax, byte [rax]")
 
         elif t == "PRE_INC":
             if node.children[0].type == "IDENTIFIER":
@@ -445,6 +448,9 @@ class x86_64_Linux:
         elif t == "STRING":
             lbl = self.string_label(node.value)
             self.emit(f"    lea rax, [{lbl}]")
+
+        elif t == "CHAR_LIT":
+            self.emit(f"    mov rax, {node.value}")
 
         elif t == "UNARY_MINUS":
             self.gen_expr(node.children[0])

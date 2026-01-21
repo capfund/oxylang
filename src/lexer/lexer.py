@@ -81,6 +81,22 @@ class Lexer:
         value = self.text[start:self.pos]
         self.advance()
         return Token("STRING", value)
+    
+    def lex_char(self):
+        self.advance()
+        ch = self.current_char()
+
+        if ch is None:
+            raise SyntaxError(f"error: unterminated character literal (line {self.ln}, col {self.pos})")
+
+        value = ord(ch)
+        self.advance()
+
+        if self.current_char() != "'":
+            raise SyntaxError(f"error: character literal must be one character (line {self.ln}, col {self.pos})")
+
+        self.advance()
+        return Token("CHAR_LIT", value)
 
     def lex_identifier_or_keyword(self):
         start = self.pos
@@ -118,8 +134,10 @@ class Lexer:
                 self.skip_comment()
             elif self.current_char().isdigit():
                 tokens.append(self.lex_number())
-            elif self.current_char() in ('"', "'"):
+            elif self.current_char() == '"':
                 tokens.append(self.lex_string())
+            elif self.current_char() == "'":
+                tokens.append(self.lex_char())
             elif self.current_char().isalpha() or self.current_char() == '_':
                 tokens.append(self.lex_identifier_or_keyword())
             else:

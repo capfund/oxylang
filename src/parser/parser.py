@@ -264,6 +264,10 @@ class Parser:
             self.advance()
             return ASTNode("STRING", tok.value)
         
+        if tok.type == "CHAR_LIT":
+            self.advance()
+            return ASTNode("CHAR_LIT", tok.value)
+        
         if tok.type == "MULTIPLY":
             self.advance()
             expr = self.parse_primary()

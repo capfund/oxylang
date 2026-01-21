@@ -25,8 +25,19 @@ fn wrapper(char* str) -> void {
     puts("done loop");
 }
 
+fn atoi(char* s) -> int {
+    int result = 0;
+    int i = 0;
+    while (s[i] != 0) {
+        result = result * 10 + (s[i] - '0');
+        i += 1;
+    }
+    ret result;
+}
+
 fn main() -> int {
-    char* s = "hello";
+    int n = atoi("15");
+    puts("String converted to integer");
     int result = factorial(5);
     puts("Factorial computed");
     result++;
@@ -37,7 +48,7 @@ fn main() -> int {
     puts("Negation computed");
     x = -x;
 
-    ret x;
+    ret n;
 }
 """
 
