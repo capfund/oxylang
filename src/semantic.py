@@ -21,6 +21,9 @@ class SemanticAnalyzer:
                 continue
 
             else:
+                if node.type == "INCLUDE":
+                    continue
+                
                 raise SemanticError(
                     f"Illegal top-level statement: {node.type}"
                 )

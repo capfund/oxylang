@@ -5,6 +5,8 @@ from compiler.x86_64_linux import x86_64_Linux
 import os
 
 source = """
+include minlib;
+
 fn factorial(int n) -> int {
     if (n <= 1) {
         ret 1;
@@ -52,7 +54,9 @@ fn main() -> int {
 }
 """
 
-ast = Parser(Lexer(source).tokenize()).parse()
+tok = Lexer(source).tokenize()
+ast = Parser(tok).parse()
+print(ast)
 SemanticAnalyzer(ast).analyze()
 
 asm = x86_64_Linux(ast).generate()

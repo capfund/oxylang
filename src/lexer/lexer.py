@@ -12,7 +12,7 @@ class Lexer:
         "char", "int", "int16", "int32", "int64",
         "float", "void",
         "ret", "fn", "if", "else", "while", "for",
-        "break", "continue", "unsafe"
+        "break", "continue", "unsafe", "include"
     }
 
     SYMBOLS = {

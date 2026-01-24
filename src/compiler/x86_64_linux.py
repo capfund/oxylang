@@ -4,7 +4,6 @@ from platform import node
 class CodegenError(Exception):
     pass
 
-
 class x86_64_Linux:
     """Linux codegen for x86_64 arch using NASM syntax"""
 
@@ -19,6 +18,8 @@ class x86_64_Linux:
         self.strings = {}
         self.rodata = []
         self.loop_stack = []
+        self.includes = {}
+        self.symbol_table = {}
 
     def emit(self, line=""):
         self.lines.append(line)
@@ -73,6 +74,8 @@ class x86_64_Linux:
         for node in self.ast.children:
             if node.type == "FUNCTION":
                 self.gen_function(node)
+            else:
+                self.gen_stmt(node)
 
         if self.rodata:
             self.emit()
@@ -119,6 +122,10 @@ class x86_64_Linux:
 
     def gen_stmt(self, node):
         t = node.type
+
+        if t == "INCLUDE":
+            filename = node.value
+            #raise Exception(f"Include not supported in codegen: {filename}")
 
         if t == "VAR_DECL":
             if node.children[0].value == "FLOAT":

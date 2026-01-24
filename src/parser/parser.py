@@ -11,7 +11,7 @@ class ASTNode:
 class Parser:
     TYPE_TOKENS = {
         "INT", "INT16", "INT32", "INT64",
-        "CHAR", "FLOAT", "VOID", "FN"
+        "CHAR", "FLOAT", "VOID", "FN", "INCLUDE"
     }
 
     PRECEDENCE = {
@@ -90,6 +90,12 @@ class Parser:
             self.eat("RBRACE")
 
             return ASTNode("FUNCTION", name, [return_type, ASTNode("PARAMS", children=params), ASTNode("BODY", children=body)])
+
+        if tok.type == "INCLUDE":
+            self.eat("INCLUDE")
+            filename = self.eat("IDENTIFIER").value
+            self.eat("SEMICOLON")
+            return ASTNode("INCLUDE", filename)
 
         if tok.type in self.TYPE_TOKENS:
             type_tok = self.current()
