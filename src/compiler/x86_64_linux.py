@@ -1,6 +1,3 @@
-from platform import node
-
-
 class CodegenError(Exception):
     pass
 
@@ -313,7 +310,7 @@ class x86_64_Linux:
         t = node.type
 
         if t == "INCLUDE":
-            pass
+            return
         
         if t == "NUMBER" and isinstance(node.value, float):
             raise CodegenError("error: floats unimplemented")
