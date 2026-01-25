@@ -18,8 +18,6 @@ class x86_64_Linux:
         self.strings = {}
         self.rodata = []
         self.loop_stack = []
-        self.includes = {}
-        self.symbol_table = {}
 
     def emit(self, line=""):
         self.lines.append(line)
@@ -124,8 +122,7 @@ class x86_64_Linux:
         t = node.type
 
         if t == "INCLUDE":
-            filename = node.value
-            #raise Exception(f"Include not supported in codegen: {filename}")
+            return
 
         if t == "VAR_DECL":
             if node.children[0].value == "FLOAT":
@@ -314,6 +311,9 @@ class x86_64_Linux:
 
     def gen_expr(self, node):
         t = node.type
+
+        if t == "INCLUDE":
+            pass
         
         if t == "NUMBER" and isinstance(node.value, float):
             raise CodegenError("error: floats unimplemented")

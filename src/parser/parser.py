@@ -93,7 +93,7 @@ class Parser:
 
         if tok.type == "INCLUDE":
             self.eat("INCLUDE")
-            filename = self.eat("IDENTIFIER").value
+            filename = self.eat("STRING").value
             self.eat("SEMICOLON")
             return ASTNode("INCLUDE", filename)
 
