@@ -12,13 +12,16 @@ class SemanticAnalyzer:
 
     def _collect_globals(self):
         for node in self.ast.children:
-            if node.type == "FUNCTION":
-                if node.value in self.functions:
-                    raise SemanticError(f"Duplicate function '{node.value}'")
-                self.functions[node.value] = node
+            #if node.type == "FUNCTION":
+                #if node.value in self.functions:
+                    #raise SemanticError(f"Duplicate function '{node.value}'")
+                #self.functions[node.value] = node
 
-            elif node.type == "VAR_DECL":
+            if node.type == "VAR_DECL":
                 continue
+                
+            elif node.type == "FUNCTION":
+                self.functions[node.value] = node
 
             else:
                 if node.type == "INCLUDE" or node.type == "EXTERN":

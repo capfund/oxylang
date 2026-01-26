@@ -18,6 +18,10 @@ class x86_64_Linux:
         self.globals = {}
         self.data = []
 
+    def mangle(self, name, params):
+        sig = "_".join(p.children[0].value for p in params)
+        return f"{name}__{sig}"
+
     def emit(self, line=""):
         self.lines.append(line)
 
@@ -109,8 +113,12 @@ class x86_64_Linux:
         self.data.append((name, size, val))
 
     def gen_function(self, fn):
-        name = fn.value
+        base = fn.value
         params = fn.children[1].children
+        if base != "print":
+            name = base
+        else:
+            name = self.mangle(base, params)
         body = fn.children[2].children
 
         self.locals = {}
@@ -553,15 +561,35 @@ class x86_64_Linux:
 
     def gen_call(self, node):
         argc = len(node.children)
-        func_name = node.value
-        
+        base = node.value
+
+        if base != "print":
+            func_name = base
+        else:
+            arg_types = []
+            for arg in node.children:
+                if arg.type == "STRING":
+                    arg_types.append("CHAR_PTR")
+                elif arg.type == "CHAR_LIT":
+                    arg_types.append("CHAR")
+                elif arg.type == "IDENTIFIER":
+                    if arg.value in self.locals:
+                        _, size = self.locals[arg.value]
+                        arg_types.append("CHAR" if size == 1 else "INT")
+                    else:
+                        arg_types.append("INT")
+                else:
+                    arg_types.append("INT")
+
+            func_name = base + "__" + "_".join(arg_types)
+
         if argc > len(self.ARG_REGS):
             raise CodegenError("too many arguments")
 
         for arg in reversed(node.children):
             self.gen_expr(arg)
             self.emit("    push rax")
-        
+
         for i in range(argc):
             self.emit(f"    pop {self.ARG_REGS[i]}")
 

@@ -9,3 +9,11 @@ fn atoi(char* s) -> int {
     }
     ret result + adder;
 }
+
+fn print(char* a) -> void {
+    puts(a);
+}
+
+fn print(int a) -> void {
+    puts("attempt?, nein!");
+}
