@@ -15,6 +15,8 @@ class x86_64_Linux:
         self.strings = {}
         self.rodata = []
         self.loop_stack = []
+        self.globals = {}
+        self.data = []
 
     def emit(self, line=""):
         self.lines.append(line)
@@ -67,7 +69,9 @@ class x86_64_Linux:
         self.emit("section .text")
 
         for node in self.ast.children:
-            if node.type == "FUNCTION":
+            if node.type == "VAR_DECL":
+                self.gen_global(node)
+            elif node.type == "FUNCTION":
                 self.gen_function(node)
             else:
                 self.gen_stmt(node)
@@ -79,7 +83,28 @@ class x86_64_Linux:
                 escaped = s.replace("\\", "\\\\").replace('"', '\\"')
                 self.emit(f"{lbl}: db \"{escaped}\", 0")
 
+        if self.data:
+            self.emit()
+            self.emit("section .data")
+            for name, size, val in self.data:
+                if size == 1:
+                    self.emit(f"{name}: db {val}")
+                else:
+                    self.emit(f"{name}: dq {val}")
+
         return "\n".join(self.lines)
+    
+    def gen_global(self, node):
+        name = node.value
+        size = self.sizeof(node.children[0])
+        self.globals[name] = size
+
+        if len(node.children) > 1:
+            val = node.children[1].value
+        else:
+            val = 0
+
+        self.data.append((name, size, val))
 
     def gen_function(self, fn):
         name = fn.value
@@ -238,8 +263,15 @@ class x86_64_Linux:
         lhs, rhs = node.children
 
         if lhs.type == "IDENTIFIER":
-            offset, size = self.locals[lhs.value]
-            self.emit(f"    lea rdx, [rbp{offset}]")
+            name = lhs.value
+            if name in self.locals:
+                offset, size = self.locals[name]
+                self.emit(f"    lea rdx, [rbp{offset}]")
+            elif name in self.globals:
+                size = self.globals[name]
+                self.emit(f"    lea rdx, [{name}]")
+            else:
+                raise CodegenError(f"Undefined variable {name}")
 
         elif lhs.type == "DEREF":
             self.gen_expr(lhs.children[0])
@@ -326,10 +358,13 @@ class x86_64_Linux:
             expr = node.children[0]
             if expr.type == "IDENTIFIER":
                 name = expr.value
-                if name not in self.locals:
+                if name in self.locals:
+                    offset, _ = self.locals[name]
+                    self.emit(f"    lea rax, [rbp{offset}]")
+                elif name in self.globals:
+                    self.emit(f"    lea rax, [{name}]")
+                else:
                     raise CodegenError(f"Undefined variable {name}")
-                offset, _ = self.locals[name]
-                self.emit(f"    lea rax, [rbp{offset}]")
             elif expr.type == "ARRAY_INDEX":
                 # &arr[i]; compute array base + index
                 base = expr.children[0]
@@ -426,13 +461,20 @@ class x86_64_Linux:
                 raise CodegenError("error: invalid decrement target")
 
         elif t == "IDENTIFIER":
-            if node.value not in self.locals:
-                raise CodegenError(f"Undefined variable {node.value}")
-            offset, size = self.locals[node.value]
-            if size == 1:
-                self.emit(f"    movzx rax, byte [rbp{offset}]")
+            if node.value in self.locals:
+                offset, size = self.locals[node.value]
+                if size == 1:
+                    self.emit(f"    movzx rax, byte [rbp{offset}]")
+                else:
+                    self.emit(f"    mov rax, [rbp{offset}]")
+            elif node.value in self.globals:
+                size = self.globals[node.value]
+                if size == 1:
+                    self.emit(f"    movzx rax, byte [{node.value}]")
+                else:
+                    self.emit(f"    mov rax, [{node.value}]")
             else:
-                self.emit(f"    mov rax, [rbp{offset}]")
+                raise CodegenError(f"Undefined variable {node.value}")
 
         elif t == "BIN_OP" and (node.value == "ASSIGN" or node.value.endswith("_ASSIGN")):
             self.gen_assign(node)

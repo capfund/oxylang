@@ -1,3 +1,5 @@
+int adder = 5;
+
 fn atoi(char* s) -> int {
     int result = 0;
     int i = 0;
@@ -5,5 +7,5 @@ fn atoi(char* s) -> int {
         result = result * 10 + (s[i] - '0');
         i += 1;
     }
-    ret result;
+    ret result + adder;
 }
