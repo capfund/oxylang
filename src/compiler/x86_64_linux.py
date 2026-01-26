@@ -82,6 +82,55 @@ class x86_64_Linux:
             else:
                 self.gen_stmt(node)
 
+        self.emit("display_number:")
+        self.emit("    push rax")
+        self.emit("    push rbx")
+        self.emit("    push rcx")
+        self.emit("    push rdx")
+
+        self.emit("    mov rbx, rax")  
+        self.emit("    cmp rbx, 0")
+        self.emit("    jne .num_nonzero")
+
+        self.emit("    mov word [buffer], '0'+0x0A")
+        self.emit("    mov rax, 1")          
+        self.emit("    mov rdi, 1")          
+        self.emit("    lea rsi, [buffer]")   
+        self.emit("    mov rdx, 2")          
+        self.emit("    syscall")             
+        self.emit("    jmp .end_display")
+
+        self.emit(".num_nonzero:")
+        self.emit("    lea rcx, [buffer+19]")  
+        self.emit("    mov byte [rcx], 10")
+        self.emit("    dec rcx")
+        self.emit("    mov rax, rbx")
+
+        self.emit(".convert_loop:")
+        self.emit("    xor rdx, rdx") 
+        self.emit("    mov rsi, 10")
+        self.emit("    div rsi")   
+        self.emit("    add dl, '0'")
+        self.emit("    mov [rcx], dl")
+        self.emit("    dec rcx")
+        self.emit("    cmp rax, 0")
+        self.emit("    jne .convert_loop")
+
+        self.emit("    inc rcx")  
+        self.emit("    mov rax, 1")
+        self.emit("    mov rdi, 1")
+        self.emit("    lea rsi, [rcx]")
+        self.emit("    mov rdx, buffer+20")
+        self.emit("    sub rdx, rcx") 
+        self.emit("    syscall")
+
+        self.emit(".end_display:")
+        self.emit("    pop rdx")
+        self.emit("    pop rcx")
+        self.emit("    pop rbx")
+        self.emit("    pop rax")
+        self.emit("    ret")
+
         if self.rodata:
             self.emit()
             self.emit("section .rodata")
@@ -89,14 +138,15 @@ class x86_64_Linux:
                 escaped = s.replace("\\", "\\\\").replace('"', '\\"')
                 self.emit(f"{lbl}: db \"{escaped}\", 0")
 
-        if self.data:
-            self.emit()
-            self.emit("section .data")
-            for name, size, val in self.data:
-                if size == 1:
-                    self.emit(f"{name}: db {val}")
-                else:
-                    self.emit(f"{name}: dq {val}")
+        self.emit()
+        self.emit("section .data")
+        self.emit("    buffer times 20 db 0")
+
+        for name, size, val in self.data:
+            if size == 1:
+                self.emit(f"{name}: db {val}")
+            else:
+                self.emit(f"{name}: dq {val}")
 
         return "\n".join(self.lines)
     
