@@ -11,6 +11,7 @@ with open("tests.oxy") as f:
 pp = Preprocessor()
 ast = pp.process("tests.oxy")
 SemanticAnalyzer(ast).analyze()
+print(ast)
 
 asm = x86_64_Linux(ast).generate()
 print(asm)

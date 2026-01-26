@@ -21,7 +21,7 @@ class SemanticAnalyzer:
                 continue
 
             else:
-                if node.type == "INCLUDE":
+                if node.type == "INCLUDE" or node.type == "EXTERN":
                     continue
                 
                 raise SemanticError(

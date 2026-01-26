@@ -1,4 +1,4 @@
-include "minlib.oxy";
+extern atoi; // from system libc (for testing externs)
 
 fn factorial(int n) -> int {
     if (n <= 1) {

@@ -73,6 +73,8 @@ class x86_64_Linux:
                 self.gen_global(node)
             elif node.type == "FUNCTION":
                 self.gen_function(node)
+            elif node.type == "EXTERN":
+                self.emit(f"extern {node.value}")
             else:
                 self.gen_stmt(node)
 
@@ -144,6 +146,9 @@ class x86_64_Linux:
         t = node.type
 
         if t == "INCLUDE":
+            return
+        
+        if t == "EXTERN":
             return
 
         if t == "VAR_DECL":
@@ -342,6 +347,9 @@ class x86_64_Linux:
         t = node.type
 
         if t == "INCLUDE":
+            return
+        
+        if t == "EXTERN":
             return
         
         if t == "NUMBER" and isinstance(node.value, float):

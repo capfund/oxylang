@@ -11,7 +11,7 @@ class ASTNode:
 class Parser:
     TYPE_TOKENS = {
         "INT", "INT16", "INT32", "INT64",
-        "CHAR", "FLOAT", "VOID", "FN", "INCLUDE"
+        "CHAR", "FLOAT", "VOID", "FN", "INCLUDE", "EXTERN"
     }
 
     PRECEDENCE = {
@@ -96,7 +96,13 @@ class Parser:
             filename = self.eat("STRING").value
             self.eat("SEMICOLON")
             return ASTNode("INCLUDE", filename)
-
+        
+        if tok.type == "EXTERN":
+            self.eat("EXTERN")
+            filename = self.eat("IDENTIFIER").value
+            self.eat("SEMICOLON")
+            return ASTNode("EXTERN", filename)
+        
         if tok.type in self.TYPE_TOKENS:
             type_tok = self.current()
             self.advance()
