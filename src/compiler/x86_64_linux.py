@@ -674,6 +674,23 @@ class x86_64_Linux:
             self.emit("    idiv rcx")
             self.emit("    mov rax, rdx")
             return
+        
+        if op == "POW":
+            self.emit("    mov rbx, rax")  # base
+            # rcx = exponent already
+            self.emit("    mov rax, 1")    # result
+
+            pow_loop = self.new_label("pow_loop")
+            end_pow = self.new_label("end_pow")
+
+            self.emit(f"{pow_loop}:")
+            self.emit("    cmp rcx, 0")
+            self.emit(f"    je {end_pow}")
+            self.emit("    imul rax, rbx")
+            self.emit("    dec rcx")
+            self.emit(f"    jmp {pow_loop}")
+            self.emit(f"{end_pow}:")
+            return
 
         if op in ("EQ", "NE", "LT", "LE", "GT", "GE"):
             self.emit("    cmp rax, rcx")

@@ -21,7 +21,7 @@ class Parser:
         'EQ': 3, 'NE': 3,
         'LT': 4, 'LE': 4, 'GT': 4, 'GE': 4,
         'PLUS': 5, 'MINUS': 5,
-        'MULTIPLY': 6, 'DIVIDE': 6, 'MOD': 6,
+        'MULTIPLY': 6, 'DIVIDE': 6, 'MOD': 6, 'POW': 7
     }
 
     def __init__(self, tokens):
@@ -260,7 +260,10 @@ class Parser:
                 break
             op = self.current()
             self.advance()
-            right = self.parse_expression(prec + 1)
+            next_min_prec = prec + 1
+            if op.type == "POW":
+                next_min_prec = prec
+            right = self.parse_expression(next_min_prec)
             left = ASTNode("BIN_OP", op.type, [left, right])
 
         return left
