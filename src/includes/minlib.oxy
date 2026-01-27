@@ -42,10 +42,9 @@ fn print(float a) -> void {
         itmp = tmp;
     }
 
-
     int frac_i = tmp;
 
-    display_number(whole);
-    puts(".");
+    display_number_nonl(whole);
+    print_char('.');
     display_number(frac_i);
 }
