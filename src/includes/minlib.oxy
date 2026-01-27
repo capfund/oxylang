@@ -27,7 +27,23 @@ fn print(int a) -> void {
 fn print(float a) -> void {
     int whole = a;
     float frac = a - whole;
-    int frac_i = frac * 1000000;
+
+    int dp = 0;
+    float tmp = frac;
+    int itmp = tmp;
+
+    while (dp < 6) {
+        if (tmp - itmp == 0) {
+            break;
+        }
+
+        tmp = tmp * 10;
+        dp = dp + 1;
+        itmp = tmp;
+    }
+
+
+    int frac_i = tmp;
 
     display_number(whole);
     puts(".");

@@ -413,7 +413,9 @@ class x86_64_Linux:
         else:
             raise CodegenError(f"error: unsupported assignment op {op}")
 
-        if size == 1:
+        if typ == "FLOAT":
+            self.emit("    movsd [rdx], xmm0")
+        elif size == 1:
             self.emit("    mov byte [rdx], al")
         else:
             self.emit("    mov [rdx], rax")
