@@ -229,7 +229,9 @@ class x86_64_Linux:
 
         elif t == "RETURN":
             if node.children:
-                self.gen_expr(node.children[0])
+                ret_type = self.gen_expr(node.children[0])
+                # if FLOAT, value is already in xmm0 (SysV ABI)
+                # if INT, value is in rax (as before)
             self.emit("    mov rsp, rbp")
             self.emit("    pop rbp")
             self.emit("    ret")
@@ -584,8 +586,12 @@ class x86_64_Linux:
                     self.emit("    pop rax")
                     self.emit("    cvtsi2sd xmm0, rax")
 
-                self.gen_float_binop(node.value)
-                return "FLOAT"
+                if node.value in ("EQ", "NE", "LT", "LE", "GT", "GE"):
+                    self.gen_float_cmp(node.value)
+                    return "INT"
+                else:
+                    self.gen_float_binop(node.value)
+                    return "FLOAT"
             else:
                 self.emit("    mov rcx, rax")
                 self.emit("    pop rax")
@@ -622,6 +628,22 @@ class x86_64_Linux:
             return
 
         raise CodegenError(f"unsupported float operator {op}")
+    
+    def gen_float_cmp(self, op):
+        #xmm0 left, xmm1 right
+        self.emit("    ucomisd xmm0, xmm1")
+
+        setcc = {
+            "EQ": "sete",
+            "NE": "setne",
+            "LT": "setb",   # <
+            "LE": "setbe",  # <=
+            "GT": "seta",   # >
+            "GE": "setae",  # >=
+        }[op]
+
+        self.emit(f"    {setcc} al")
+        self.emit("    movzx rax, al")
 
     def gen_binop(self, op):
         ops = {

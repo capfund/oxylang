@@ -20,6 +20,10 @@ fn wrapper(char* str) -> void {
     puts("done loop");
 }
 
+fn test(float a) -> float {
+    ret 2 * a;
+}
+
 fn main() -> int {
     int n = atoi("15");
     puts("String converted to integer");
@@ -34,7 +38,12 @@ fn main() -> int {
     x = -x;
 
     print(5);
-    float ty = n * 2.5;
+    float ay = test(6.7);
+    if (ay < 20) {
+        print("Boo hoo!");
+    } else {
+        print("E?");
+    }
 
     ret n;
 }
