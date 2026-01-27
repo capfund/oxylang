@@ -34,6 +34,7 @@ fn main() -> int {
     x = -x;
 
     print(5);
+    float ty = n * 2.5;
 
     ret n;
 }

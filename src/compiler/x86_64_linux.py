@@ -5,6 +5,7 @@ class x86_64_Linux:
     """Linux codegen for x86_64 arch using NASM syntax"""
 
     ARG_REGS = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+    FLOAT_REGS = [f"xmm{i}" for i in range(8)]
 
     def __init__(self, ast):
         self.ast = ast
@@ -49,15 +50,16 @@ class x86_64_Linux:
             return base_size * array_size
         return 8
 
-    def alloc_local(self, name, size):
+    def alloc_local(self, name, size, typ):
         self.stack_size += size
-        self.locals[name] = (-self.stack_size, size)
+        self.locals[name] = (-self.stack_size, size, typ)
 
     def collect_locals(self, node):
         if node.type == "VAR_DECL":
             if node.value not in self.locals:
+                typ = node.children[0].value
                 size = self.sizeof(node.children[0])
-                self.alloc_local(node.value, size)
+                self.alloc_local(node.value, size, typ)
 
         if node.type in ("IF", "WHILE", "FOR", "UNSAFE_BLOCK", "BODY", "THEN", "ELSE"):
             for child in node.children:
@@ -175,8 +177,9 @@ class x86_64_Linux:
         self.stack_size = 0
 
         for param in params:
+            typ = param.children[0].value
             size = self.sizeof(param.children[0])
-            self.alloc_local(param.value, size)
+            self.alloc_local(param.value, size, typ)
 
         for stmt in body:
             self.collect_locals(stmt)
@@ -190,8 +193,11 @@ class x86_64_Linux:
         if aligned:
             self.emit(f"    sub rsp, {aligned}")
         for i, param in enumerate(params):
-            offset, _ = self.locals[param.value]
-            self.emit(f"    mov [rbp{offset}], {self.ARG_REGS[i]}")
+            offset, size, typ = self.locals[param.value]
+            if typ == "FLOAT":
+                self.emit(f"    movsd [rbp{offset}], {self.FLOAT_REGS[i]}")
+            else:
+                self.emit(f"    mov [rbp{offset}], {self.ARG_REGS[i]}")
 
         for stmt in body:
             self.gen_stmt(stmt)
@@ -210,12 +216,13 @@ class x86_64_Linux:
             return
 
         if t == "VAR_DECL":
-            if node.children[0].value == "FLOAT":
-                raise CodegenError("error: floats unimplemented")
             if len(node.children) > 1:
-                self.gen_expr(node.children[1])
-                offset, size = self.locals[node.value]
-                if size == 1:
+                val_type = self.gen_expr(node.children[1])
+                offset, size, typ = self.locals[node.value]
+
+                if typ == "FLOAT":
+                    self.emit(f"    movsd [rbp{offset}], xmm0")
+                elif size == 1:
                     self.emit(f"    mov byte [rbp{offset}], al")
                 else:
                     self.emit(f"    mov [rbp{offset}], rax")
@@ -328,7 +335,7 @@ class x86_64_Linux:
         if lhs.type == "IDENTIFIER":
             name = lhs.value
             if name in self.locals:
-                offset, size = self.locals[name]
+                offset, size, typ = self.locals[name]
                 self.emit(f"    lea rdx, [rbp{offset}]")
             elif name in self.globals:
                 size = self.globals[name]
@@ -410,11 +417,15 @@ class x86_64_Linux:
         if t == "EXTERN":
             return
         
-        if t == "NUMBER" and isinstance(node.value, float):
-            raise CodegenError("error: floats unimplemented")
-
         if t == "NUMBER":
-            self.emit(f"    mov rax, {node.value}")
+            if isinstance(node.value, float):
+                lbl = self.new_label("float")
+                self.data.append((lbl, 8, f"__float64__({node.value})"))
+                self.emit(f"    movsd xmm0, [{lbl}]")
+                return "FLOAT"
+            else:
+                self.emit(f"    mov rax, {node.value}")
+                return "INT"
 
         elif t == "DEREF":
             self.gen_expr(node.children[0])
@@ -459,7 +470,7 @@ class x86_64_Linux:
         elif t == "PRE_INC":
             if node.children[0].type == "IDENTIFIER":
                 name = node.children[0].value
-                offset, size = self.locals[name]
+                offset, size, typ = self.locals[name]
                 if size == 1:
                     self.emit(f"    movzx rax, byte [rbp{offset}]")
                     self.emit("    add al, 1")
@@ -475,7 +486,7 @@ class x86_64_Linux:
         elif t == "PRE_DEC":
             if node.children[0].type == "IDENTIFIER":
                 name = node.children[0].value
-                offset, size = self.locals[name]
+                offset, size, typ = self.locals[name]
                 if size == 1:
                     self.emit(f"    movzx rax, byte [rbp{offset}]")
                     self.emit("    sub al, 1")
@@ -491,7 +502,7 @@ class x86_64_Linux:
         elif t == "POST_INC":
             if node.children[0].type == "IDENTIFIER":
                 name = node.children[0].value
-                offset, size = self.locals[name]
+                offset, size, typ = self.locals[name]
                 if size == 1:
                     self.emit(f"    movzx rax, byte [rbp{offset}]")
                     self.emit("    push rax")
@@ -510,7 +521,7 @@ class x86_64_Linux:
         elif t == "POST_DEC":
             if node.children[0].type == "IDENTIFIER":
                 name = node.children[0].value
-                offset, size = self.locals[name]
+                offset, size, typ = self.locals[name]
                 if size == 1:
                     self.emit(f"    movzx rax, byte [rbp{offset}]")
                     self.emit("    push rax")
@@ -528,11 +539,16 @@ class x86_64_Linux:
 
         elif t == "IDENTIFIER":
             if node.value in self.locals:
-                offset, size = self.locals[node.value]
-                if size == 1:
+                offset, size, typ = self.locals[node.value]
+                if typ == "FLOAT":
+                    self.emit(f"    movsd xmm0, [rbp{offset}]")
+                    return "FLOAT"
+                elif size == 1:
                     self.emit(f"    movzx rax, byte [rbp{offset}]")
+                    return "INT"
                 else:
                     self.emit(f"    mov rax, [rbp{offset}]")
+                    return "INT"
             elif node.value in self.globals:
                 size = self.globals[node.value]
                 if size == 1:
@@ -546,13 +562,35 @@ class x86_64_Linux:
             self.gen_assign(node)
 
         elif t == "BIN_OP":
-            self.gen_expr(node.children[0])
-            self.emit("    push rax")
-            self.gen_expr(node.children[1])
-            self.emit("    mov rcx, rax")
-            self.emit("    pop rax")
+            lt = self.gen_expr(node.children[0])
 
-            self.gen_binop(node.value)
+            if lt == "FLOAT":
+                self.emit("    sub rsp, 8")
+                self.emit("    movsd [rsp], xmm0")
+            else:
+                self.emit("    push rax")
+
+            rt = self.gen_expr(node.children[1])
+
+            if lt == "FLOAT" or rt == "FLOAT":
+                if rt == "INT":
+                    self.emit("    cvtsi2sd xmm0, rax")
+                self.emit("    movsd xmm1, xmm0")
+
+                if lt == "FLOAT":
+                    self.emit("    movsd xmm0, [rsp]")
+                    self.emit("    add rsp, 8")
+                else:
+                    self.emit("    pop rax")
+                    self.emit("    cvtsi2sd xmm0, rax")
+
+                self.gen_float_binop(node.value)
+                return "FLOAT"
+            else:
+                self.emit("    mov rcx, rax")
+                self.emit("    pop rax")
+                self.gen_binop(node.value)
+                return "INT"
 
         elif t == "CALL":
             self.gen_call(node)
@@ -570,6 +608,20 @@ class x86_64_Linux:
 
         else:
             raise CodegenError(f"error: unsupported expr {t}")
+        
+    def gen_float_binop(self, op):
+        ops = {
+            "PLUS": "addsd",
+            "MINUS": "subsd",
+            "MULTIPLY": "mulsd",
+            "DIVIDE": "divsd",
+        }
+
+        if op in ops:
+            self.emit(f"    {ops[op]} xmm0, xmm1")
+            return
+
+        raise CodegenError(f"unsupported float operator {op}")
 
     def gen_binop(self, op):
         ops = {
