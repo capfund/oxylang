@@ -698,24 +698,32 @@ class x86_64_Linux:
                     arg_types.append("CHAR")
                 elif arg.type == "IDENTIFIER":
                     if arg.value in self.locals:
-                        _, size = self.locals[arg.value]
-                        arg_types.append("CHAR" if size == 1 else "INT")
+                        _, size, typ = self.locals[arg.value]
+                        arg_types.append("FLOAT" if typ == "FLOAT" else ("CHAR" if size == 1 else "INT"))
                     else:
                         arg_types.append("INT")
+                elif arg.type == "NUMBER" and isinstance(arg.value, float):
+                    arg_types.append("FLOAT")
                 else:
                     arg_types.append("INT")
 
             func_name = base + "__" + "_".join(arg_types)
 
-        if argc > len(self.ARG_REGS):
-            raise CodegenError("too many arguments")
+        int_i = 0
+        float_i = 0
 
-        for arg in reversed(node.children):
-            self.gen_expr(arg)
-            self.emit("    push rax")
+        #if argc > len(self.ARG_REGS):
+        #    raise CodegenError("too many arguments")
 
-        for i in range(argc):
-            self.emit(f"    pop {self.ARG_REGS[i]}")
+        for arg in node.children:
+            t = self.gen_expr(arg)
+
+            if t == "FLOAT":
+                self.emit(f"    movsd {self.FLOAT_REGS[float_i]}, xmm0")
+                float_i += 1
+            else:
+                self.emit(f"    mov {self.ARG_REGS[int_i]}, rax")
+                int_i += 1
 
         self.emit("    sub rsp, 16")
         self.emit(f"    call {func_name}")
