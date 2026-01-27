@@ -23,3 +23,13 @@ fn print(char* a) -> void {
 fn print(int a) -> void {
     display_number(a);
 }
+
+fn print(float a) -> void {
+    int whole = a;
+    float frac = a - whole;
+    int frac_i = frac * 1000000;
+
+    display_number(whole);
+    puts(".");
+    display_number(frac_i);
+}

@@ -44,6 +44,7 @@ fn main() -> int {
     } else {
         print("E?");
     }
+    print(3.14159265);
 
     ret n;
 }

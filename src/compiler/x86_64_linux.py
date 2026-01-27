@@ -222,6 +222,9 @@ class x86_64_Linux:
 
                 if typ == "FLOAT":
                     self.emit(f"    movsd [rbp{offset}], xmm0")
+                elif val_type == "FLOAT" and typ == "INT":
+                    self.emit("    cvttsd2si rax, xmm0")
+                    self.emit(f"    mov [rbp{offset}], rax")
                 elif size == 1:
                     self.emit(f"    mov byte [rbp{offset}], al")
                 else:
@@ -367,8 +370,13 @@ class x86_64_Linux:
             raise CodegenError("error: invalid assignment target")
 
         #RHS
-        self.gen_expr(rhs)
-        self.emit("    mov rcx, rax")
+        rhs_type = self.gen_expr(rhs)
+
+        if rhs_type == "FLOAT" and typ == "INT":
+            self.emit("    cvttsd2si rax, xmm0")
+            self.emit("    mov rcx, rax")
+        else:
+            self.emit("    mov rcx, rax")
 
         if op == "ASSIGN":
             self.emit("    mov rax, rcx")
