@@ -785,7 +785,11 @@ class x86_64_Linux:
                 elif arg.type == "IDENTIFIER":
                     if arg.value in self.locals:
                         _, size, typ = self.locals[arg.value]
-                        arg_types.append("FLOAT" if typ == "FLOAT" else ("CHAR" if size == 1 else "INT"))
+                        #arg_types.append("FLOAT" if typ == "FLOAT" else ("CHAR" if size == 1 else "INT"))
+                        if typ == "FLOAT":
+                            arg_types.append("FLOAT")
+                        else:
+                            arg_types.append(typ)
                     else:
                         arg_types.append("INT")
                 elif arg.type == "NUMBER" and isinstance(arg.value, float):
