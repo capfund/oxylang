@@ -225,10 +225,11 @@ class x86_64_Linux:
     def gen_function(self, fn):
         base = fn.value
         params = fn.children[1].children
-        if base != "print":
+        if base in ["main", "puts", "display_number", "display_number_nonl", "print_char"]:
             name = base
         else:
             name = self.mangle(base, params)
+        #eoc
         body = fn.children[2].children
 
         self.locals = {}
@@ -771,9 +772,9 @@ class x86_64_Linux:
     def gen_call(self, node):
         argc = len(node.children)
         base = node.value
-
-        if base != "print":
+        if base in ["main", "puts", "display_number", "display_number_nonl", "print_char"]:
             func_name = base
+            #eoc
         else:
             arg_types = []
             for arg in node.children:
