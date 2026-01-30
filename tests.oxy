@@ -42,7 +42,7 @@ fn main() -> int {
     print("\n");
     float ay = test(6.7);
     if (ay < 20) {
-        print("Boo hoo!\n");
+        print("\tBoo hoo!\n");
     } else {
         print("E?\n");
     }

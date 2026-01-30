@@ -85,7 +85,7 @@ class Lexer:
                     #value += ' 10'
                     value += '\n'
                 elif self.current_char() == 't':
-                    value += '\t'
+                    value += '    '
                 # Add more escape sequences as needed
                 else:
                     value += self.current_char()
@@ -96,7 +96,6 @@ class Lexer:
         self.advance()  # Skip the closing quote
         return Token("STRING", value)
 
-    
     def lex_char(self):
         self.advance()
         ch = self.current_char()
