@@ -207,7 +207,9 @@ class x86_64_Linux:
                 self.emit(f"{name}: db {val}")
             else:
                 self.emit(f"{name}: dq {val}")
-
+        
+        peepholed = self.peephole(self.lines)
+        self.lines = peepholed
         return "\n".join(self.lines)
     
     def gen_global(self, node):
@@ -818,3 +820,17 @@ class x86_64_Linux:
         self.emit("    sub rsp, 16")
         self.emit(f"    call {func_name}")
         self.emit("    add rsp, 16")
+
+    def peephole(self, lines):
+        out = []
+        i = 0
+        while i < len(lines):
+            if i+1 < len(lines) and lines[i] == "    push rax" and lines[i+1] == "    pop rax":
+                i += 2
+                continue
+            if i+1 < len(lines) and lines[i].startswith("    mov rax, rax"):
+                i += 1
+                continue
+            out.append(lines[i])
+            i += 1
+        return out
