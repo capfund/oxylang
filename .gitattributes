@@ -1,0 +1,14 @@
+# gitattributes
+# lf
+
+*.py   text eol=lf
+*.oxy  text eol=lf
+*.txt  text eol=lf
+*.md   text eol=lf
+
+# oxy files
+*.oxy linguist-language=Oxylang
+
+# diffs
+*.md   diff=markdown
+*.tex  diff=tex
