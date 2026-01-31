@@ -8,7 +8,8 @@ fn factorial(int n) -> int {
 }
 
 fn wrapper(char* str) -> void {
-    puts(str);
+    print(str);
+    print("\n");
     int n = 5;
     while (1) {
         n += 1;
@@ -17,7 +18,7 @@ fn wrapper(char* str) -> void {
         }
         continue;
     }
-    puts("done loop");
+    print("done loop\n");
 }
 
 fn test(float a) -> float {
@@ -26,25 +27,27 @@ fn test(float a) -> float {
 
 fn main() -> int {
     int n = atoi("15");
-    puts("String converted to integer");
+    print("String converted to integer\n");
     int result = factorial(5);
-    puts("Factorial computed");
+    print("Factorial computed\n");
     result++;
 
     int x = 10 % 3;
-    puts("Modulo computed");
+    print("Modulo computed\n");
     x = -x;
-    puts("Negation computed");
+    print("Negation computed\n");
     x = -x;
 
     print(5);
+    print("\n");
     float ay = test(6.7);
     if (ay < 20) {
-        print("Boo hoo!");
+        print("\tBoo hoo!\n");
     } else {
-        print("E?");
+        print("E?\n");
     }
     print(3.67267);
+    print("\n");
 
     ret n;
 }

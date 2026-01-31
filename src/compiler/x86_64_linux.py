@@ -68,7 +68,7 @@ class x86_64_Linux:
 
     def generate(self):
         self.emit("global main")
-        self.emit("extern puts")
+        #self.emit("extern puts") deprecated
         #self.emit("extern itoa")
         #self.emit("extern atoi")
         self.emit()
@@ -196,7 +196,15 @@ class x86_64_Linux:
             self.emit("section .rodata")
             for lbl, s in self.rodata:
                 escaped = s.replace("\\", "\\\\").replace('"', '\\"')
-                self.emit(f"{lbl}: db \"{escaped}\", 0")
+           
+                db_parts = []
+                for c in escaped:
+                    if c == "\n":
+                        db_parts.append("10")
+                    else:
+                        db_parts.append(f'"{c}"')
+                
+                self.emit(f"{lbl}: db {', '.join(db_parts)}, 0")
 
         self.emit()
         self.emit("section .data")
@@ -207,7 +215,9 @@ class x86_64_Linux:
                 self.emit(f"{name}: db {val}")
             else:
                 self.emit(f"{name}: dq {val}")
-
+        
+        peepholed = self.peephole(self.lines)
+        self.lines = peepholed
         return "\n".join(self.lines)
     
     def gen_global(self, node):
@@ -292,8 +302,6 @@ class x86_64_Linux:
         elif t == "RETURN":
             if node.children:
                 ret_type = self.gen_expr(node.children[0])
-                # if FLOAT, value is already in xmm0 (SysV ABI)
-                # if INT, value is in rax (as before)
             self.emit("    mov rsp, rbp")
             self.emit("    pop rbp")
             self.emit("    ret")
@@ -737,9 +745,8 @@ class x86_64_Linux:
             return
         
         if op == "POW":
-            self.emit("    mov rbx, rax")  # base
-            # rcx = exponent already
-            self.emit("    mov rax, 1")    # result
+            self.emit("    mov rbx, rax")
+            self.emit("    mov rax, 1")
 
             pow_loop = self.new_label("pow_loop")
             end_pow = self.new_label("end_pow")
@@ -818,3 +825,17 @@ class x86_64_Linux:
         self.emit("    sub rsp, 16")
         self.emit(f"    call {func_name}")
         self.emit("    add rsp, 16")
+
+    def peephole(self, lines):
+        out = []
+        i = 0
+        while i < len(lines):
+            if i+1 < len(lines) and lines[i] == "    push rax" and lines[i+1] == "    pop rax":
+                i += 2
+                continue
+            if i+1 < len(lines) and lines[i].startswith("    mov rax, rax"):
+                i += 1
+                continue
+            out.append(lines[i])
+            i += 1
+        return out

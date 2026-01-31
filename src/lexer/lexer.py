@@ -76,12 +76,26 @@ class Lexer:
         quote = self.current_char()
         self.advance()
         start = self.pos
+        value = ""
+
         while self.current_char() and self.current_char() != quote:
+            if self.current_char() == '\\':
+                self.advance()
+                if self.current_char() == 'n':
+                    #value += ' 10'
+                    value += '\n'
+                elif self.current_char() == 't':
+                    value += '    '
+                # Add more escape sequences as needed
+                else:
+                    value += self.current_char()
+            else:
+                value += self.current_char()
             self.advance()
-        value = self.text[start:self.pos]
-        self.advance()
+
+        self.advance()  # Skip the closing quote
         return Token("STRING", value)
-    
+
     def lex_char(self):
         self.advance()
         ch = self.current_char()
