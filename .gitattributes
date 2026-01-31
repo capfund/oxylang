@@ -6,8 +6,8 @@
 *.txt  text eol=lf
 *.md   text eol=lf
 
-# oxy files
-*.oxy linguist-language=Oxylang
+# oxy files temp highlighted as c
+*.oxy linguist-language=C
 
 # diffs
 *.md   diff=markdown
