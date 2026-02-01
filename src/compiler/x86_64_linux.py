@@ -18,6 +18,7 @@ class x86_64_Linux:
         self.loop_stack = []
         self.globals = {}
         self.data = []
+        self.structs = {}
 
     def mangle(self, name, params):
         sig = "_".join(p.children[0].value for p in params)
@@ -81,8 +82,13 @@ class x86_64_Linux:
                 self.gen_function(node)
             elif node.type == "EXTERN":
                 self.emit(f"extern {node.value}")
-            elif node.type == "STRUCT":
-                pass
+            elif node.type == "STRUCT_DEF":
+                offset = 0
+                fields = {}
+                for field in node.children:
+                    fields[field.value] = offset
+                    offset += 8 #assume 8b
+                self.structs[node.value] = fields
             else:
                 self.gen_stmt(node)
 
@@ -437,7 +443,26 @@ class x86_64_Linux:
             self.emit("    add rax, rcx")
             self.emit("    mov rdx, rax")
             size = 8
+        elif lhs.type == "FIELD_ACCESS":
+            base = lhs.children[0]
+            field = lhs.value
 
+            name = base.value
+            offset, size, typ = self.locals[name]
+            field_offset = self.structs[typ][field]
+
+            self.emit(f"    lea rdx, [rbp{offset + field_offset}]")
+            size = 8
+        elif lhs.type == "PTR_FIELD_ACCESS":
+            self.gen_expr(lhs.children[0])  # ptr @ rax
+            field = lhs.value
+
+            struct_name = self.locals[lhs.children[0].value][2].replace("_PTR", "")
+            field_offset = self.structs[struct_name][field]
+
+            self.emit(f"    add rax, {field_offset}")
+            self.emit("    mov rdx, rax")
+            size = 8
         else:
             raise CodegenError("error: invalid assignment target")
 
@@ -538,6 +563,46 @@ class x86_64_Linux:
                 self.emit("    add rax, rcx")
             else:
                 raise CodegenError("error: can only take address of identifiers and array elements")
+        elif t == "FIELD_ACCESS":
+            base = node.children[0] 
+            field = node.value #name
+
+            # addr of struct
+            if base.type == "IDENTIFIER":
+                name = base.value
+                if name in self.locals:
+                    offset, _, typ = self.locals[name]
+                    struct_name = typ
+                    self.emit(f"    lea rax, [rbp{offset}]")
+                elif name in self.globals:
+                    struct_name = None
+                    self.emit(f"    lea rax, [{name}]")
+                else:
+                    raise CodegenError("unknown struct variable")
+            else:
+                self.gen_expr(base)   # adr. in rax
+
+            struct = struct_name if struct_name else base.value
+            field_offset = self.structs[struct][field]
+
+            self.emit(f"    add rax, {field_offset}")
+            self.emit("    mov rax, [rax]")
+            return "INT"
+        elif t == "PTR_FIELD_ACCESS":
+            base = node.children[0]
+            field = node.value
+
+            self.gen_expr(base)  # ptr @ rax
+            struct_name = None
+
+            if base.type == "IDENTIFIER":
+                struct_name = self.locals[base.value][2].replace("_PTR", "")
+
+            field_offset = self.structs[struct_name][field]
+
+            self.emit(f"    add rax, {field_offset}")
+            self.emit("    mov rax, [rax]")
+            return "INT"
 
         elif t == "ARRAY_INDEX":
             #array[index] = *(array + index)

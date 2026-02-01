@@ -38,8 +38,10 @@ fn main() -> int {
     result++;
 
     Point p;
-    //p.x = 10;
-    //p.y = 20;
+    p.x = 10;
+    p.y = 20;
+    print("p.x is: "); print(p.x);
+    print("\n");
 
     int x = 10 % 3;
     print("Modulo computed\n");
@@ -51,7 +53,7 @@ fn main() -> int {
     print("\n");
     float ay = test(6.7);
     if (ay < 20) {
-        print("\tBoo hoo!\n");
+        print("Boo hoo!\n");
     } else {
         print("E?\n");
     }
