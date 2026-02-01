@@ -81,6 +81,8 @@ class x86_64_Linux:
                 self.gen_function(node)
             elif node.type == "EXTERN":
                 self.emit(f"extern {node.value}")
+            elif node.type == "STRUCT":
+                pass
             else:
                 self.gen_stmt(node)
 
@@ -277,6 +279,9 @@ class x86_64_Linux:
 
     def gen_stmt(self, node):
         t = node.type
+
+        if t == "STRUCT_DEF":
+            return
 
         if t == "INCLUDE":
             return

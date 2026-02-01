@@ -11,7 +11,7 @@ class ASTNode:
 class Parser:
     TYPE_TOKENS = {
         "INT", "INT16", "INT32", "INT64",
-        "CHAR", "FLOAT", "VOID", "FN", "INCLUDE", "EXTERN"
+        "CHAR", "FLOAT", "VOID", "FN", "INCLUDE", "EXTERN", "STRUCT"
     }
 
     PRECEDENCE = {
@@ -27,6 +27,7 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
+        self.typedefs = set()
 
     def current(self):
         return self.tokens[self.pos]
@@ -45,9 +46,15 @@ class Parser:
         return tok
     
     def eat_type(self):
-        if self.current().type not in self.TYPE_TOKENS:
-            raise SyntaxError(f"error: expected type, got {self.current()}")
-        return self.eat(self.current().type)
+        tok = self.current()
+        if tok.type in self.TYPE_TOKENS:
+            return self.eat(tok.type)
+
+        if tok.type == "IDENTIFIER" and tok.value in self.typedefs:
+            self.advance()
+            return tok
+
+        raise SyntaxError(f"error: expected type, got {tok}")
 
     def parse(self):
         nodes = []
@@ -58,10 +65,37 @@ class Parser:
     def parse_declaration_or_statement(self):
         tok = self.current()
 
-        if tok.type in self.TYPE_TOKENS:
+        if tok.type == "STRUCT":
+            return self.parse_struct()
+
+        # builtins or struct
+        if tok.type in self.TYPE_TOKENS or (
+            tok.type == "IDENTIFIER" and tok.value in self.typedefs
+        ):
             return self.parse_declaration_or_function()
 
         return self.parse_statement()
+    
+    def parse_struct(self):
+        self.eat("STRUCT")
+        name = self.eat("IDENTIFIER").value
+        self.typedefs.add(name)
+        self.eat("LBRACE")
+
+        fields = []
+        while self.current().type != "RBRACE":
+            field_type = self.eat_type()  
+            field_name = self.eat("IDENTIFIER").value
+            self.eat("SEMICOLON")
+
+            fields.append(
+                ASTNode("FIELD", field_name, [ASTNode("TYPE", field_type.type)])
+            )
+
+        self.eat("RBRACE")
+        self.eat("SEMICOLON")
+
+        return ASTNode("STRUCT_DEF", name, fields)
 
     def parse_declaration_or_function(self):
         tok = self.current()
@@ -103,7 +137,9 @@ class Parser:
             self.eat("SEMICOLON")
             return ASTNode("EXTERN", filename)
         
-        if tok.type in self.TYPE_TOKENS:
+        if tok.type in self.TYPE_TOKENS or (
+            tok.type == "IDENTIFIER" and tok.value in self.typedefs
+        ):
             type_tok = self.current()
             self.advance()
             is_ptr = False
@@ -118,7 +154,12 @@ class Parser:
                 array_size = self.eat("NUMBER").value
                 self.eat("RBRACKET")
 
-            type_name = type_tok.type + ("_PTR" if is_ptr else "")
+            if type_tok.type == "IDENTIFIER":
+                base = type_tok.value
+            else:
+                base = type_tok.type
+
+            type_name = base + ("_PTR" if is_ptr else "")
             type_node = ASTNode("TYPE", type_name,
                                 [ASTNode("ARRAY_SIZE", array_size)] if array_size else [])
 
@@ -327,6 +368,15 @@ class Parser:
                 elif self.current().type == "DECREMENT":
                     self.advance()
                     expr = ASTNode("POST_DEC", children=[expr])
+                elif self.current().type == "DOT":
+                    self.advance()
+                    field = self.eat("IDENTIFIER").value
+                    expr = ASTNode("FIELD_ACCESS", field, [expr])
+
+                elif self.current().type == "ARROW":
+                    self.advance()
+                    field = self.eat("IDENTIFIER").value
+                    expr = ASTNode("PTR_FIELD_ACCESS", field, [expr])
                 else:
                     break
             return expr

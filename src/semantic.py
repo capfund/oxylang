@@ -24,7 +24,7 @@ class SemanticAnalyzer:
                 self.functions[node.value] = node
 
             else:
-                if node.type == "INCLUDE" or node.type == "EXTERN":
+                if node.type == "INCLUDE" or node.type == "EXTERN" or node.type.startswith("STRUCT"):
                     continue
                 
                 raise SemanticError(

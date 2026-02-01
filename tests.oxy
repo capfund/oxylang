@@ -1,5 +1,10 @@
 include "minlib.oxy";
 
+struct Point {
+    int x;
+    int y;
+};
+
 fn factorial(int n) -> int {
     if (n <= 1) {
         ret 1;
@@ -31,6 +36,10 @@ fn main() -> int {
     int result = factorial(5);
     print("Factorial computed\n");
     result++;
+
+    Point p;
+    //p.x = 10;
+    //p.y = 20;
 
     int x = 10 % 3;
     print("Modulo computed\n");

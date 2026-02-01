@@ -12,14 +12,15 @@ class Lexer:
         "char", "int", "int16", "int32", "int64",
         "float", "void",
         "ret", "fn", "if", "else", "while", "for",
-        "break", "continue", "unsafe", "include", "extern"
+        "break", "continue", "unsafe", "include", "extern",
+        "struct"
     }
 
     SYMBOLS = {
         '=': "ASSIGN", ';': "SEMICOLON", ',': "COMMA",
         '(': "LPAREN", ')': "RPAREN",
         '{': "LBRACE", '}': "RBRACE",
-        '[': "LBRACKET", ']': "RBRACKET"
+        '[': "LBRACKET", ']': "RBRACKET", ".": "DOT"
     }
 
     OPERATORS = {
