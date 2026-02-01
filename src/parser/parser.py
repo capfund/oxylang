@@ -84,12 +84,23 @@ class Parser:
 
         fields = []
         while self.current().type != "RBRACE":
-            field_type = self.eat_type()  
+            field_type_tok = self.eat_type()
+            is_ptr = False
+            if self.current().type == "MULTIPLY":
+                is_ptr = True
+                self.advance()
             field_name = self.eat("IDENTIFIER").value
             self.eat("SEMICOLON")
 
+            if field_type_tok.type == "IDENTIFIER":
+                base = field_type_tok.value
+            else:
+                base = field_type_tok.type
+
+            type_name = base + ("_PTR" if is_ptr else "")
+
             fields.append(
-                ASTNode("FIELD", field_name, [ASTNode("TYPE", field_type.type)])
+                ASTNode("FIELD", field_name, [ASTNode("TYPE", type_name)])
             )
 
         self.eat("RBRACE")

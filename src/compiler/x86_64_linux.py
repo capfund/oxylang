@@ -86,8 +86,9 @@ class x86_64_Linux:
                 offset = 0
                 fields = {}
                 for field in node.children:
-                    fields[field.value] = offset
-                    offset += 8 #assume 8b
+                    field_type = field.children[0].value
+                    fields[field.value] = (offset, field_type)
+                    offset += self.sizeof(field.children[0])
                 self.structs[node.value] = fields
             else:
                 self.gen_stmt(node)
@@ -449,10 +450,11 @@ class x86_64_Linux:
 
             name = base.value
             offset, size, typ = self.locals[name]
-            field_offset = self.structs[typ][field]
+
+            field_offset, field_type = self.structs[typ][field]
 
             self.emit(f"    lea rdx, [rbp{offset + field_offset}]")
-            size = 8
+            size = self.sizeof(type("T", (), {"value": field_type, "children": []})())
         elif lhs.type == "PTR_FIELD_ACCESS":
             self.gen_expr(lhs.children[0])  # ptr @ rax
             field = lhs.value
@@ -583,11 +585,16 @@ class x86_64_Linux:
                 self.gen_expr(base)   # adr. in rax
 
             struct = struct_name if struct_name else base.value
-            field_offset = self.structs[struct][field]
+            field_offset, field_type = self.structs[struct][field]
 
             self.emit(f"    add rax, {field_offset}")
-            self.emit("    mov rax, [rax]")
-            return "INT"
+
+            if field_type == "CHAR":
+                self.emit("    movzx rax, byte [rax]")
+                return "INT"
+            else:
+                self.emit("    mov rax, [rax]")
+                return field_type
         elif t == "PTR_FIELD_ACCESS":
             base = node.children[0]
             field = node.value
@@ -598,11 +605,16 @@ class x86_64_Linux:
             if base.type == "IDENTIFIER":
                 struct_name = self.locals[base.value][2].replace("_PTR", "")
 
-            field_offset = self.structs[struct_name][field]
+            field_offset, field_type = self.structs[struct_name][field]
 
             self.emit(f"    add rax, {field_offset}")
-            self.emit("    mov rax, [rax]")
-            return "INT"
+
+            if field_type == "CHAR":
+                self.emit("    movzx rax, byte [rax]")
+                return "INT"
+            else:
+                self.emit("    mov rax, [rax]")
+                return field_type
 
         elif t == "ARRAY_INDEX":
             #array[index] = *(array + index)
@@ -848,43 +860,53 @@ class x86_64_Linux:
 
     def gen_call(self, node):
         argc = len(node.children)
-        base = node.value
-        if base in ["main", "puts", "display_number", "display_number_nonl", "print_char"]:
-            func_name = base
-            #eoc
+        func_base = node.value
+
+        if func_base in ["main", "puts", "display_number", "display_number_nonl", "print_char"]:
+            func_name = func_base
         else:
             arg_types = []
             for arg in node.children:
                 if arg.type == "STRING":
                     arg_types.append("CHAR_PTR")
+
                 elif arg.type == "CHAR_LIT":
                     arg_types.append("CHAR")
+
                 elif arg.type == "IDENTIFIER":
                     if arg.value in self.locals:
                         _, size, typ = self.locals[arg.value]
-                        #arg_types.append("FLOAT" if typ == "FLOAT" else ("CHAR" if size == 1 else "INT"))
-                        if typ == "FLOAT":
-                            arg_types.append("FLOAT")
-                        else:
-                            arg_types.append(typ)
+                        arg_types.append("FLOAT" if typ == "FLOAT" else typ)
                     else:
                         arg_types.append("INT")
+
                 elif arg.type == "NUMBER" and isinstance(arg.value, float):
                     arg_types.append("FLOAT")
+
+                elif arg.type == "FIELD_ACCESS":
+                    struct_base = arg.children[0]
+                    field = arg.value
+                    _, _, struct_type = self.locals[struct_base.value]
+                    field_type = self.structs[struct_type][field][1]
+                    arg_types.append(field_type)
+
+                elif arg.type == "PTR_FIELD_ACCESS":
+                    struct_base = arg.children[0]
+                    struct_type = self.locals[struct_base.value][2].replace("_PTR", "")
+                    field = arg.value
+                    field_type = self.structs[struct_type][field][1]
+                    arg_types.append(field_type)
+
                 else:
                     arg_types.append("INT")
 
-            func_name = base + "__" + "_".join(arg_types)
+            func_name = func_base + "__" + "_".join(arg_types)
 
         int_i = 0
         float_i = 0
 
-        #if argc > len(self.ARG_REGS):
-        #    raise CodegenError("too many arguments")
-
         for arg in node.children:
             t = self.gen_expr(arg)
-
             if t == "FLOAT":
                 self.emit(f"    movsd {self.FLOAT_REGS[float_i]}, xmm0")
                 float_i += 1

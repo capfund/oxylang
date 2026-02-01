@@ -3,6 +3,7 @@ include "minlib.oxy";
 struct Point {
     int x;
     int y;
+    char* happy;
 };
 
 fn factorial(int n) -> int {
@@ -40,7 +41,11 @@ fn main() -> int {
     Point p;
     p.x = 10;
     p.y = 20;
-    print("p.x is: "); print(p.x);
+    p.happy = "yes!";
+    print("p.x is: ");
+    print(p.x);
+    print("\n");
+    print(p.happy);
     print("\n");
 
     int x = 10 % 3;
