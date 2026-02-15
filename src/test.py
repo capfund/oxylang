@@ -16,8 +16,9 @@ print(ast)
 asm = x86_64_Linux(ast).generate()
 print(asm)
 
-with open("out.asm", "w") as f:
+os.makedirs("build", exist_ok=True)
+with open("build/out.asm", "w") as f:
     f.write(asm)
 
-os.system("nasm -felf64 out.asm")
-os.system("gcc out.o -no-pie")
+os.system("nasm -felf64 build/out.asm")
+os.system("gcc build/out.o -no-pie")
