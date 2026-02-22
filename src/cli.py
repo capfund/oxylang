@@ -31,23 +31,25 @@ def main():
             print("error: no output file specified")
             sys.exit(1)
 
-        pp = preprocessor.Preprocessor()
-        ast = pp.process(args.f)
-        semantic.SemanticAnalyzer(ast).analyze()
         if args.arch == "x86_64-linux":
+            pp = preprocessor.Preprocessor()
+            ast = pp.process(args.f)
+            semantic.SemanticAnalyzer(ast).analyze()
             asm = compiler.x86_64_linux.x86_64_Linux(ast).generate()
+            if not args.o.endswith((".o", ".out", ".asm")):
+                print("error: output file must end with .o, .out, or .asm; check capitalization or file format; will be handled as raw assembly")
+                args.o = args.o.split(".")[0] + ".asm"
+            with open(args.o.replace(".out", ".asm").replace(".o", ".asm"), "w") as f:
+                f.write(asm)
+
+            if args.o.endswith(".o"):
+                os.system(f"nasm -felf64 {args.o.replace('.o', '.asm')} -o {args.o}")
+            elif args.o.endswith(".out"):
+                os.system(f"nasm -felf64 {args.o.replace('.out', '.asm')} -o {args.o.replace('.out', '.o')}")
+                os.system(f"gcc {args.o.replace('.out', '.o')} -no-pie -o {args.o}")
         else:
             print(f"error: unsupported architecture or does not exist '{args.arch}'")
             sys.exit(1)
-
-        with open(args.o.replace(".out", ".asm").replace(".o", ".asm"), "w") as f:
-            f.write(asm)
-
-        if args.o.endswith(".o"):
-            os.system(f"nasm -felf64 {args.o.replace('.o', '.asm')} -o {args.o}")
-        elif args.o.endswith(".out"):
-            os.system(f"nasm -felf64 {args.o.replace('.out', '.asm')} -o {args.o.replace('.out', '.o')}")
-            os.system(f"gcc {args.o.replace('.out', '.o')} -no-pie -o {args.o}")
 
 if __name__ == "__main__":
     main()
